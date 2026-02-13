@@ -31,6 +31,8 @@ const {Engine,Render,Runner,Bodies,Composite,Body,Events} = Matter;
 
 const stage=document.getElementById("stage");
 const engine=Engine.create();
+engine.positionIterations = 10;
+engine.velocityIterations = 10;
 engine.gravity.y=1;
 
 const w=stage.clientWidth;
@@ -257,16 +259,18 @@ function motion(e){
     }
 
     // 🌪 легка постійна турбулентність
-    for(const h of hearts){
-      Body.applyForce(
-        h.body,
-        h.body.position,
-        {
-          x:(Math.random()-0.5)*0.00015,
-          y:(Math.random()-0.5)*0.00015
-        }
-      );
-    }
+if(!textMode){
+  for(const h of hearts){
+    Body.applyForce(
+      h.body,
+      h.body.position,
+      {
+        x:(Math.random()-0.5)*0.00015,
+        y:(Math.random()-0.5)*0.00015
+      }
+    );
+  }
+}
   }
 
   // 💖 3. МАГНІТ ДО ТЕКСТУ
@@ -276,14 +280,23 @@ function motion(e){
       const target = textPoints[i % textPoints.length];
       const h = hearts[i];
 
-      Body.applyForce(
-        h.body,
-        h.body.position,
-        {
-          x:(target.x - h.body.position.x)*0.00002,
-          y:(target.y - h.body.position.y)*0.00002
-        }
-      );
+const dx = target.x - h.body.position.x;
+const dy = target.y - h.body.position.y;
+
+Body.applyForce(
+  h.body,
+  h.body.position,
+  {
+    x: dx * 0.00008,
+    y: dy * 0.00008
+  }
+);
+
+// трохи гасимо швидкість, щоб стабілізувати
+Body.setVelocity(h.body, {
+  x: h.body.velocity.x * 0.9,
+  y: h.body.velocity.y * 0.9
+});
     }
   }
 }
@@ -301,6 +314,7 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
 
 
 
