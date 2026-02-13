@@ -172,8 +172,8 @@ function motion(e){
   }
 
   // 🔥 гравітація реагує на нахил
-  engine.gravity.x=(acc.x||0)/30;
-  engine.gravity.y=(acc.y||0)/30;
+  engine.gravity.x = -(acc.x || 0) / 30;
+  engine.gravity.y =  (acc.y || 0) / 30;
 }
 
 window.addEventListener("pointerdown",()=>{
@@ -189,3 +189,4 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
