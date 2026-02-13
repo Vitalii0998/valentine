@@ -143,10 +143,10 @@ function spawn(){
   const pos=randomInside();
 
 const body=Bodies.circle(pos.x,pos.y,r,{
-  restitution:0.3,
-  friction:0.2,
-  frictionAir:0.002,
-  density:0.0015,
+  restitution:0.05,     // майже без відскоку
+  friction:0.15,        // ковзають
+  frictionAir:0.001,
+  density:0.003,        // важчі
   render:{visible:false}
 });
 
@@ -162,7 +162,9 @@ const body=Bodies.circle(pos.x,pos.y,r,{
 let lastShake=0;
 function motion(e){
 
-  // 🔥 1. ШЕЙК (без гравітації)
+  const now = Date.now();
+
+  // 🔥 ШЕЙК
   const a = e.acceleration;
   if(a){
     const mag = Math.sqrt(
@@ -171,18 +173,65 @@ function motion(e){
       (a.z||0)**2
     );
 
-    const now = Date.now();
-    if(mag > 12 && now-lastShake > 250){
+    // звичайний шейк → спавн
+    if(mag > 12 && now-lastShake > 200){
       lastShake = now;
-      for(let i=0;i<15;i++) spawn();
+      for(let i=0;i<20;i++) spawn();
+    }
+
+    // 💥 сильний шейк → підкидання
+    if(mag > 22){
+      for(const h of hearts){
+        Body.applyForce(
+          h.body,
+          h.body.position,
+          {
+            x:(Math.random()-0.5)*0.002,
+            y:-0.004 - Math.random()*0.002
+          }
+        );
+      }
     }
   }
 
-  // 🔥 2. НАХИЛ (з гравітацією)
+  // 🔥 НАХИЛ
   const g = e.accelerationIncludingGravity;
   if(g){
-engine.gravity.x = -(g.x || 0) / 12;
-engine.gravity.y =  (g.y || 0) / 12;
+
+    // сильніша гравітація
+    engine.gravity.x = -(g.x || 0) / 10;
+    engine.gravity.y =  (g.y || 0) / 10;
+
+    // ⚡ імпульс при різкому повороті
+    const tiltMag = Math.sqrt(
+      (g.x||0)**2 +
+      (g.y||0)**2
+    );
+
+    if(tiltMag > 15){
+      for(const h of hearts){
+        Body.applyForce(
+          h.body,
+          h.body.position,
+          {
+            x:(Math.random()-0.5)*0.0008,
+            y:(Math.random()-0.5)*0.0008
+          }
+        );
+      }
+    }
+
+    // 🌪 турбулентність
+    for(const h of hearts){
+      Body.applyForce(
+        h.body,
+        h.body.position,
+        {
+          x:(Math.random()-0.5)*0.00015,
+          y:(Math.random()-0.5)*0.00015
+        }
+      );
+    }
   }
 }
 
@@ -199,6 +248,7 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
 
 
 
