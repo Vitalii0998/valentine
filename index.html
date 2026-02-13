@@ -160,20 +160,29 @@ function spawn(){
 // 📱 shake
 let lastShake=0;
 function motion(e){
-  const acc=e.accelerationIncludingGravity;
-  if(!acc)return;
 
-  const mag=Math.sqrt((acc.x||0)**2+(acc.y||0)**2+(acc.z||0)**2);
-  const now=Date.now();
+  // 🔥 1. ШЕЙК (без гравітації)
+  const a = e.acceleration;
+  if(a){
+    const mag = Math.sqrt(
+      (a.x||0)**2 +
+      (a.y||0)**2 +
+      (a.z||0)**2
+    );
 
-  if(mag>15 && now-lastShake>250){
-    lastShake=now;
-    for(let i=0;i<15;i++)spawn();
+    const now = Date.now();
+    if(mag > 12 && now-lastShake > 250){
+      lastShake = now;
+      for(let i=0;i<15;i++) spawn();
+    }
   }
 
-  // 🔥 гравітація реагує на нахил
-  engine.gravity.x = -(acc.x || 0) / 30;
-  engine.gravity.y =  (acc.y || 0) / 30;
+  // 🔥 2. НАХИЛ (з гравітацією)
+  const g = e.accelerationIncludingGravity;
+  if(g){
+    engine.gravity.x = -(g.x || 0) / 25;
+    engine.gravity.y =  (g.y || 0) / 25;
+  }
 }
 
 window.addEventListener("pointerdown",()=>{
@@ -189,4 +198,5 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
 
