@@ -64,30 +64,54 @@ function heartPoints(cx,cy,scale,n=200){
   return pts;
 }
 function generateTextPoints(){
+
   const off = document.createElement("canvas");
   off.width = w;
   off.height = h;
   const ctx = off.getContext("2d");
 
+  ctx.clearRect(0,0,w,h);
+
   ctx.fillStyle = "white";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = "bold 60px Arial";
-  ctx.fillText("For My Valentine,", w/2, h/2 - 30);
+
+  // можна збільшити розмір якщо треба
+  ctx.font = "bold 64px Arial";
+
+  ctx.fillText("For My Valentine,", w/2, h/2 - 40);
   ctx.fillText("Marta", w/2, h/2 + 40);
 
   const data = ctx.getImageData(0,0,w,h).data;
 
   textPoints = [];
-  for(let y=0;y<h;y+=6){
-    for(let x=0;x<w;x+=6){
-      const i=(y*w+x)*4;
+
+  for(let y=0; y<h; y+=5){
+    for(let x=0; x<w; x+=5){
+
+      const i = (y*w + x) * 4;
+
+      // якщо піксель тексту
       if(data[i+3] > 150){
+
+        // тільки якщо точка всередині серця
         if(pointInsideHeart(x,y)){
           textPoints.push({x,y});
         }
       }
     }
+  }
+
+  // перемішування (Fisher–Yates)
+  for (let i = textPoints.length - 1; i > 0; i--) {
+    const j = (Math.random() * (i + 1)) | 0;
+    [textPoints[i], textPoints[j]] = [textPoints[j], textPoints[i]];
+  }
+
+  // створюємо targets під кожне сердечко
+  targets = [];
+  for(let i=0;i<hearts.length;i++){
+    targets[i] = textPoints[i % textPoints.length];
   }
 }
 
@@ -153,6 +177,7 @@ for(let i=0;i<pts.length;i++){
 const hearts=[];
 let textMode = false;
 let textPoints = [];
+let targets = [];
 
 function pointInsideHeart(x,y){
   const dx=(x-centerX)/scale;
@@ -199,64 +224,90 @@ function spawn(){
 // 📱 shake
 let lastShake=0;
 function motion(e){
-
   const now = Date.now();
 
-  // 🔥 1. ШЕЙК (без гравітації)
-  const a = e.acceleration;
-  if(a){
-    const mag = Math.sqrt(
-      (a.x||0)**2 +
-      (a.y||0)**2 +
-      (a.z||0)**2
-    );
+  // якщо збираємо текст: прибираємо всі “хаотичні” сили
+  if(textMode){
+    engine.gravity.x = 0;
+    engine.gravity.y = 0;
 
-    // звичайний шейк → спавн
+    if(textPoints.length && targets.length){
+      for(let i=0;i<hearts.length;i++){
+        const h = hearts[i];
+        const t = targets[i] || textPoints[i % textPoints.length];
+
+        const dx = t.x - h.body.position.x;
+        const dy = t.y - h.body.position.y;
+
+        // сильніший магніт + обмеження, щоб не “вибухало”
+        const fx = Math.max(-0.003, Math.min(0.003, dx * 0.00012));
+        const fy = Math.max(-0.003, Math.min(0.003, dy * 0.00012));
+
+        Body.applyForce(h.body, h.body.position, { x: fx, y: fy });
+
+        // гасимо швидкість, щоб воно реально ставало на місце
+        Body.setVelocity(h.body, {
+          x: h.body.velocity.x * 0.85,
+          y: h.body.velocity.y * 0.85
+        });
+
+        // коли дуже близько, майже “приклеюємо”
+        if (dx*dx + dy*dy < 25) {
+          Body.setVelocity(h.body, { x: 0, y: 0 });
+        }
+      }
+    }
+    return;
+  }
+
+  // ---------- NORMAL MODE (до тексту) ----------
+
+  // 1) ШЕЙК (fallback на includingGravity якщо acceleration null)
+  const a = e.acceleration || e.accelerationIncludingGravity;
+  if(a){
+    const mag = Math.sqrt((a.x||0)**2 + (a.y||0)**2 + (a.z||0)**2);
+
     if(mag > 12 && now-lastShake > 200){
       lastShake = now;
       for(let i=0;i<20;i++) spawn();
     }
 
-    // 💥 сильний шейк → підкидання
     if(mag > 22){
       for(const h of hearts){
-        Body.applyForce(
-          h.body,
-          h.body.position,
-          {
-            x:(Math.random()-0.5)*0.002,
-            y:-0.004 - Math.random()*0.002
-          }
-        );
+        Body.applyForce(h.body, h.body.position, {
+          x:(Math.random()-0.5)*0.002,
+          y:-0.004 - Math.random()*0.002
+        });
       }
     }
   }
 
-  // 🔥 2. НАХИЛ (з гравітацією)
+  // 2) НАХИЛ
   const g = e.accelerationIncludingGravity;
   if(g){
-
     engine.gravity.x = -(g.x || 0) / 10;
     engine.gravity.y =  (g.y || 0) / 10;
 
-    // ⚡ імпульс при різкому повороті
-    const tiltMag = Math.sqrt(
-      (g.x||0)**2 +
-      (g.y||0)**2
-    );
-
+    // імпульс при різкому повороті
+    const tiltMag = Math.sqrt((g.x||0)**2 + (g.y||0)**2);
     if(tiltMag > 15){
       for(const h of hearts){
-        Body.applyForce(
-          h.body,
-          h.body.position,
-          {
-            x:(Math.random()-0.5)*0.0008,
-            y:(Math.random()-0.5)*0.0008
-          }
-        );
+        Body.applyForce(h.body, h.body.position, {
+          x:(Math.random()-0.5)*0.0008,
+          y:(Math.random()-0.5)*0.0008
+        });
       }
     }
+
+    // турбулентність
+    for(const h of hearts){
+      Body.applyForce(h.body, h.body.position, {
+        x:(Math.random()-0.5)*0.00015,
+        y:(Math.random()-0.5)*0.00015
+      });
+    }
+  }
+}
 
     // 🌪 легка постійна турбулентність
 if(!textMode){
@@ -314,6 +365,7 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
 
 
 
