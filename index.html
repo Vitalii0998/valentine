@@ -3,45 +3,41 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Shake Heart</title>
+<title>Heart Physics</title>
 
 <style>
 html,body{
   margin:0;
   height:100%;
-  background:radial-gradient(circle at 50% 40%, #1a1f3a 0%, #0f1220 70%);
+  background:radial-gradient(circle at 50% 40%, #1b2040 0%, #0d1025 70%);
   display:flex;
   align-items:center;
   justify-content:center;
   overflow:hidden;
 }
-
 #stage{
-  width:95vmin;
-  height:95vmin;
+  width:98vmin;
+  height:98vmin;
 }
-
 canvas{width:100%;height:100%}
 </style>
 </head>
 <body>
-
 <div id="stage"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
-
 <script>
 const {Engine,Render,Runner,Bodies,Composite,Body,Events} = Matter;
 
-const stage = document.getElementById("stage");
-const engine = Engine.create();
-engine.gravity.y = 1.1;
+const stage=document.getElementById("stage");
+const engine=Engine.create();
+engine.gravity.y=1;
 
-const w = stage.clientWidth;
-const h = stage.clientHeight;
+const w=stage.clientWidth;
+const h=stage.clientHeight;
 
-const render = Render.create({
-  element: stage,
+const render=Render.create({
+  element:stage,
   engine,
   options:{
     width:w,
@@ -54,8 +50,8 @@ const render = Render.create({
 Render.run(render);
 Runner.run(Runner.create(),engine);
 
-// ❤️ форма серця
-function heartPoints(cx,cy,scale,n=160){
+// ❤️ більша форма
+function heartPoints(cx,cy,scale,n=200){
   const pts=[];
   for(let i=0;i<n;i++){
     const t=(i/n)*Math.PI*2;
@@ -68,10 +64,10 @@ function heartPoints(cx,cy,scale,n=160){
 
 const centerX=w/2;
 const centerY=h/2;
-const scale=Math.min(w,h)*0.022;
+const scale=Math.min(w,h)*0.028; // 🔥 більше
 const pts=heartPoints(centerX,centerY,scale);
 
-// ✨ красивий контур серця
+// контур
 Events.on(render,"afterRender",()=>{
   const ctx=render.context;
 
@@ -81,17 +77,16 @@ Events.on(render,"afterRender",()=>{
   ctx.closePath();
 
   const grad=ctx.createLinearGradient(0,0,w,h);
-  grad.addColorStop(0,"#ff4d8d");
+  grad.addColorStop(0,"#ff6aa2");
   grad.addColorStop(1,"#ff003c");
 
   ctx.strokeStyle=grad;
   ctx.lineWidth=6;
-  ctx.shadowBlur=20;
-  ctx.shadowColor="#ff4d8d";
+  ctx.shadowBlur=25;
+  ctx.shadowColor="#ff3d7a";
   ctx.stroke();
   ctx.shadowBlur=0;
 
-  // ❤️ малюємо сердечка
   ctx.textAlign="center";
   ctx.textBaseline="middle";
   for(const hrt of hearts){
@@ -117,15 +112,15 @@ for(let i=0;i<pts.length;i++){
   const wall=Bodies.rectangle(
     (a.x+b.x)/2,
     (a.y+b.y)/2,
-    len+18,
-    18,
+    len+20,
+    20,
     {isStatic:true}
   );
   Body.setAngle(wall,angle);
   Composite.add(engine.world,wall);
 }
 
-// ❤️ сердечка
+// ❤️ маленькі сердечка
 const hearts=[];
 
 function pointInsideHeart(x,y){
@@ -137,19 +132,19 @@ function pointInsideHeart(x,y){
 function randomInside(){
   let x,y;
   do{
-    x=centerX+(Math.random()-0.5)*scale*20;
-    y=centerY+(Math.random()-0.5)*scale*20;
+    x=centerX+(Math.random()-0.5)*scale*18;
+    y=centerY+(Math.random()-0.5)*scale*18;
   }while(!pointInsideHeart(x,y));
   return {x,y};
 }
 
 function spawn(){
-  const r=6+Math.random()*4; // 🔥 менші
+  const r=4+Math.random()*2; // 🔥 ще менші
   const pos=randomInside();
 
   const body=Bodies.circle(pos.x,pos.y,r,{
-    restitution:0.2,
-    friction:0.6,
+    restitution:0.15,
+    friction:0.8,
     density:0.002,
     render:{visible:false}
   });
@@ -157,43 +152,40 @@ function spawn(){
   Composite.add(engine.world,body);
   hearts.push({body,r});
 
-  if(hearts.length>350){
+  if(hearts.length>600){
     Composite.remove(engine.world,hearts.shift().body);
   }
 }
 
 // 📱 shake
 let lastShake=0;
-
 function motion(e){
   const acc=e.accelerationIncludingGravity;
   if(!acc)return;
 
-  const mag=Math.sqrt(
-    (acc.x||0)**2+
-    (acc.y||0)**2+
-    (acc.z||0)**2
-  );
-
-  const threshold=16;
+  const mag=Math.sqrt((acc.x||0)**2+(acc.y||0)**2+(acc.z||0)**2);
   const now=Date.now();
 
-  if(mag>threshold && now-lastShake>300){
+  if(mag>15 && now-lastShake>250){
     lastShake=now;
-    for(let i=0;i<12;i++)spawn();
+    for(let i=0;i<15;i++)spawn();
   }
+
+  // 🔥 гравітація реагує на нахил
+  engine.gravity.x=(acc.x||0)/30;
+  engine.gravity.y=(acc.y||0)/30;
 }
 
 window.addEventListener("pointerdown",()=>{
   window.addEventListener("devicemotion",motion,{passive:true});
 },{once:true});
 
+// ПК тест
 window.addEventListener("keydown",e=>{
   if(e.code==="Space"){
-    for(let i=0;i<12;i++)spawn();
+    for(let i=0;i<20;i++)spawn();
   }
 });
 </script>
-
 </body>
 </html>
