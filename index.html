@@ -61,6 +61,33 @@ function heartPoints(cx,cy,scale,n=200){
   }
   return pts;
 }
+function generateTextPoints(){
+  const off = document.createElement("canvas");
+  off.width = w;
+  off.height = h;
+  const ctx = off.getContext("2d");
+
+  ctx.fillStyle = "white";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "bold 60px Arial";
+  ctx.fillText("For My Valentine,", w/2, h/2 - 30);
+  ctx.fillText("Marta", w/2, h/2 + 40);
+
+  const data = ctx.getImageData(0,0,w,h).data;
+
+  textPoints = [];
+  for(let y=0;y<h;y+=6){
+    for(let x=0;x<w;x+=6){
+      const i=(y*w+x)*4;
+      if(data[i+3] > 150){
+        if(pointInsideHeart(x,y)){
+          textPoints.push({x,y});
+        }
+      }
+    }
+  }
+}
 
 const centerX=w/2;
 const centerY=h/2;
@@ -122,6 +149,8 @@ for(let i=0;i<pts.length;i++){
 
 // ❤️ маленькі сердечка
 const hearts=[];
+let textMode = false;
+let textPoints = [];
 
 function pointInsideHeart(x,y){
   const dx=(x-centerX)/scale;
@@ -139,21 +168,28 @@ function randomInside(){
 }
 
 function spawn(){
-  const r=4+Math.random()*2; // 🔥 ще менші
-  const pos=randomInside();
+  const r = 6 + Math.random()*3;
+  const pos = randomInside();
 
-const body=Bodies.circle(pos.x,pos.y,r,{
-  restitution:0.05,     // майже без відскоку
-  friction:0.15,        // ковзають
-  frictionAir:0.001,
-  density:0.003,        // важчі
-  render:{visible:false}
-});
+  const body = Bodies.circle(pos.x,pos.y,r,{
+    restitution:0.05,
+    friction:0.15,
+    frictionAir:0.001,
+    density:0.003,
+    render:{visible:false}
+  });
 
   Composite.add(engine.world,body);
   hearts.push({body,r});
 
-  if(hearts.length>600){
+  // 🔥 АКТИВАЦІЯ ТЕКСТУ
+  if(hearts.length > 350 && !textMode){
+    textMode = true;
+    generateTextPoints();
+  }
+
+  // ліміт частинок
+  if(hearts.length > 600){
     Composite.remove(engine.world,hearts.shift().body);
   }
 }
@@ -164,7 +200,7 @@ function motion(e){
 
   const now = Date.now();
 
-  // 🔥 ШЕЙК
+  // 🔥 1. ШЕЙК (без гравітації)
   const a = e.acceleration;
   if(a){
     const mag = Math.sqrt(
@@ -194,11 +230,10 @@ function motion(e){
     }
   }
 
-  // 🔥 НАХИЛ
+  // 🔥 2. НАХИЛ (з гравітацією)
   const g = e.accelerationIncludingGravity;
   if(g){
 
-    // сильніша гравітація
     engine.gravity.x = -(g.x || 0) / 10;
     engine.gravity.y =  (g.y || 0) / 10;
 
@@ -221,7 +256,7 @@ function motion(e){
       }
     }
 
-    // 🌪 турбулентність
+    // 🌪 легка постійна турбулентність
     for(const h of hearts){
       Body.applyForce(
         h.body,
@@ -229,6 +264,24 @@ function motion(e){
         {
           x:(Math.random()-0.5)*0.00015,
           y:(Math.random()-0.5)*0.00015
+        }
+      );
+    }
+  }
+
+  // 💖 3. МАГНІТ ДО ТЕКСТУ
+  if(textMode && textPoints.length){
+
+    for(let i=0;i<hearts.length;i++){
+      const target = textPoints[i % textPoints.length];
+      const h = hearts[i];
+
+      Body.applyForce(
+        h.body,
+        h.body.position,
+        {
+          x:(target.x - h.body.position.x)*0.00002,
+          y:(target.y - h.body.position.y)*0.00002
         }
       );
     }
@@ -248,6 +301,7 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
 
 
 
