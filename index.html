@@ -142,12 +142,13 @@ function spawn(){
   const r=4+Math.random()*2; // 🔥 ще менші
   const pos=randomInside();
 
-  const body=Bodies.circle(pos.x,pos.y,r,{
-    restitution:0.15,
-    friction:0.8,
-    density:0.002,
-    render:{visible:false}
-  });
+const body=Bodies.circle(pos.x,pos.y,r,{
+  restitution:0.3,
+  friction:0.2,
+  frictionAir:0.002,
+  density:0.0015,
+  render:{visible:false}
+});
 
   Composite.add(engine.world,body);
   hearts.push({body,r});
@@ -180,8 +181,8 @@ function motion(e){
   // 🔥 2. НАХИЛ (з гравітацією)
   const g = e.accelerationIncludingGravity;
   if(g){
-    engine.gravity.x = -(g.x || 0) / 25;
-    engine.gravity.y =  (g.y || 0) / 25;
+engine.gravity.x = -(g.x || 0) / 12;
+engine.gravity.y =  (g.y || 0) / 12;
   }
 }
 
@@ -198,5 +199,6 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
 
 
